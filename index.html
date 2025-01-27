@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MQTT Client</title>
+
+  <!-- Include necessary scripts -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+</head>
+
+<body>
+  <script>
+    const topic = "hydrosensor/hydro/RX"; // Define the topic
+    const taskId = "task1"; // Add unique task ID if needed
+    const username = "oyt"; // Define the username
+    const password = "123456789"; // Define the password
+    const datasetKeys = Array.from({ length: 30 }, (_, i) => `d${i + 1}`);
+ 
+    // Connect to the MQTT broker
+    const client = mqtt.connect("wss://otplai.com:8884", {
+      username: username,
+      password: password,
+      keepalive: 60,        // Set keepalive time (in seconds)
+      reconnectPeriod: 1000 // Reconnect after 1 second if connection is lost
+    });
+
+    // Handle connection success
+    client.on('connect', () => {
+      console.log(`Connected to MQTT broker as ${username}`);
+
+      // Subscribe to the desired topic
+      client.subscribe(topic, (err) => {
+        if (err) {
+          console.error(`Error subscribing to topic: ${err}`);
+        } else {
+          console.log(`Subscribed to topic: ${topic}`);
+        }
+      });
+
+      // Publish a message to the topic after subscribing
+      // client.publish(topic, "Test message", { qos: 0, retain: false }, (error) => {
+      //   if (error) {
+      //     console.error(`Error publishing message: ${error}`);
+      //   } else {
+      //     console.log(`Message published to ${topic}`);
+      //   }
+      // });
+   
+    });
+
+    // Handle incoming messages
+    client.on('message', (mqttTopic, message) => {
+      // console.log(`Received message on topic ${mqttTopic}: ${message.toString()}`);
+      
+      try {
+        const parsedMessage = JSON.parse(message.toString()); // Parse message if it's JSON
+        handleReceivedMessage(mqttTopic, parsedMessage, taskId); // Your custom message handler
+      } catch (error) {
+        console.error(`Error parsing message: ${error}`);
+      }
+    });
+
+    // Handle connection errors
+    client.on('error', (err) => {
+      console.error(`Connection error: ${err}`);
+    });
+
+    var arr = [];
+    // Custom function to handle the received messages (define this based on your use case)
+    function handleReceivedMessage(mqttTopic, msg, taskId) {
+      console.log(`Processing message from topic: ${mqttTopic} for task: ${taskId}` ,msg);
+      // Add your custom logic here to handle the parsed message
+      const newTimeLabel = new Date().toLocaleTimeString();
+
+      const newChart = {
+            labels: Array.from({ length: 30 }, (_, i) => newTimeLabel),
+            datasets: datasetKeys.map((key, index) => ({
+              label: msg.header[`h${index + 1}`] || `Dataset ${index + 1}`,
+              data: msg[`d${index + 1}`] || null,
+              borderColor: "rgb(255, 99, 132)",
+              backgroundColor: "rgb(255, 99, 132)",
+            })),
+          };
+          
+        arr.push(newChart)
+ console.log(arr)
+    }
+  </script>
+</body>
+</html>
